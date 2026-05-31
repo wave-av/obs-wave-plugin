@@ -1,0 +1,14 @@
+# obs-wave-plugin — code owners (review required on every PR; enforced by branch protection).
+# Layer 0 (Operator) of the WAVE Protocol Plane — OBS Studio plugin surface.
+
+* @wave-av/streaming-team
+
+# Security-sensitive surface: output API + network push to api.wave.online.
+/src/                     @wave-av/streaming-team
+/cmake/                   @wave-av/streaming-team
+
+# Governance / CI / config.
+/.github/                 @wave-av/streaming-team
+/CMakeLists.txt           @wave-av/streaming-team
+/CMakePresets.json        @wave-av/streaming-team
+/buildspec.json           @wave-av/streaming-team

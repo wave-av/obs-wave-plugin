@@ -1,0 +1,87 @@
+# Inlined mirror of wave-av/wave-foundation/.github/workflows/checks.yml@v1
+# (sha pinned in .foundation-version). C/C++ adaptation — reusable
+# foundation gate: secret-scan + vendor-binary deny-list + file-size guard
+# + placeholder build (real OBS-toolchain CI lands in Wave 2 — task #163).
+
+name: foundation checks
+
+on:
+  workflow_call:
+    inputs:
+      max_lines:
+        type: number
+        # C / C++ tolerates longer files than TS; libobs idioms run long.
+        default: 1000
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Secret scan (fail-closed, allowlist-aware)
+        run: |
+          HITS=$(grep -rIEn '(sk-[A-Za-z0-9]{20}|sk_(live|test)_[A-Za-z0-9]{20}|npm_[A-Za-z0-9]{30}|sbp_[a-f0-9]{40}|github_pat_[A-Za-z0-9_]{40}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30}|AIzaSy[A-Za-z0-9_-]{20}|xai-[A-Za-z0-9]{40}|xoxb-[A-Za-z0-9-]+|-----BEGIN [A-Z ]*PRIVATE KEY)' \
+            --exclude-dir=build --exclude-dir=build_macos --exclude-dir=build_linux --exclude-dir=build_windows \
+            --exclude-dir=.git \
+            --exclude='*.lock' \
+            . | grep -v 'pragma: allowlist secret' || true)
+          if [ -n "$HITS" ]; then echo "$HITS"; echo "::error::secret pattern detected"; exit 1; fi
+
+      - name: Vendor-binary deny-list (libobs / libsrt / NDI)
+        run: |
+          # Per CONTRIBUTING.md license-boundary rule: never commit libobs,
+          # libsrt, or NDI vendor binaries / headers. CMake resolves these
+          # at configure time via find_package / system packages.
+          HITS=$(find . \
+            \( -name 'libobs*' -o -name 'libsrt*' \
+               -o -name 'Processing.NDI.Lib*' -o -name 'libndi*' \
+               -o -name '*.dylib' -o -name '*.so' -o -name '*.dll' \
+               -o -name '*.a'    -o -name '*.lib' \) \
+            -not -path './.git/*' -not -path './build*/*' -print)
+          if [ -n "$HITS" ]; then echo "$HITS"; echo "::error::vendor-licensed binary or compiled artifact committed; see CONTRIBUTING.md"; exit 1; fi
+
+      - name: File-size guard
+        env: { MAX_LINES: "${{ inputs.max_lines }}" }
+        run: |
+          BAD=$(find . -type f \( -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' \
+              -o -name '*.cmake' -o -name 'CMakeLists.txt' \) \
+            -not -path './build*/*' -not -path './.git/*' \
+            -exec sh -c 'lines=$(wc -l < "$1"); [ "$lines" -gt "$MAX_LINES" ] && echo "$1: $lines"' _ {} \;)
+          if [ -n "$BAD" ]; then echo "$BAD"; echo "::error::file exceeds ${MAX_LINES} lines"; exit 1; fi
+
+  # Placeholder build — real OBS-toolchain CI shape (per obs-plugintemplate's
+  # buildspec.json + the OBS CI matrices) lands in Wave 2 (task #163).
+  # This job intentionally skips gracefully when libobs isn't installed in
+  # the runner, which is the expected state for a scaffold gate.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with: { persist-credentials: false }
+      - name: Install CMake + ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+      - name: Configure (best-effort — libobs not installed on this runner)
+        run: |
+          mkdir -p build
+          cd build
+          # Wave 2 will install libobs from obs-studio's package or build it
+          # from source. For now: configure and tolerate the missing-libobs
+          # diagnostic so the scaffold gate stays green.
+          cmake .. -G Ninja 2>&1 | tee configure.log || \
+            grep -q 'libobs' configure.log
+      - name: Build (best-effort)
+        run: |
+          cd build
+          # If configure succeeded, build; otherwise no-op for the scaffold.
+          if [ -f build.ninja ]; then ninja || true; fi

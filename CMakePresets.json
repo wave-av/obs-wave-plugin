@@ -1,0 +1,40 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "macos",
+      "displayName": "macOS (Ninja, universal)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build_macos",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0"
+      }
+    },
+    {
+      "name": "linux-x86_64",
+      "displayName": "Linux x86_64 (Ninja)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build_linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "windows-x64",
+      "displayName": "Windows x64 (Ninja, MSVC)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build_windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "macos",        "configurePreset": "macos" },
+    { "name": "linux-x86_64", "configurePreset": "linux-x86_64" },
+    { "name": "windows-x64",  "configurePreset": "windows-x64", "configuration": "RelWithDebInfo" }
+  ]
+}

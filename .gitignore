@@ -1,0 +1,53 @@
+# build output
+build/
+build_*/
+out/
+dist/
+*.tsbuildinfo
+
+# editor / IDE
+.vs/
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.user
+
+# CMake artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# compiled plugin artifacts (NEVER commit; foundation gate denies)
+*.dylib
+*.so
+*.dll
+*.pdb
+*.exp
+*.lib
+*.a
+*.o
+*.obj
+
+# vendored libraries / headers (license boundary — NEVER commit)
+# libobs is GPL-2 and resolved by find_package; libsrt is system-installed.
+libobs/
+libobs.*
+libsrt/
+libsrt.*
+resources/libobs/
+resources/libsrt/
+resources/ndi/
+resources/ndi-advanced/
+Processing.NDI.Lib*
+
+# secrets (defense-in-depth; primary path is OBS profile config)
+.env
+.env.*
+!.env.example
+*.cookie.txt
+
+# logs
+*.log
