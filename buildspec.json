@@ -1,0 +1,21 @@
+{
+  "$schema": "https://obsproject.github.io/obs-plugintemplate/buildspec.schema.json",
+  "name": "wave-output",
+  "version": "0.1.0",
+  "author": "WAVE Online LLC",
+  "website": "https://github.com/wave-av/obs-wave-plugin",
+  "email": "support@wave.online",
+  "displayName": "WAVE Streaming Service",
+  "description": "Push OBS encoded output directly to api.wave.online via SRT — no re-stream relay.",
+  "platformConfig": {
+    "macos": {
+      "bundleId": "online.wave.obs-wave-plugin"
+    }
+  },
+  "dependencies": {
+    "obs-studio": {
+      "version": "30.2.0",
+      "repository": "https://github.com/obsproject/obs-studio"
+    }
+  }
+}
