@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "1",
+  "repo": "wave-av/obs-wave-plugin",
+  "version": "0.1.0",
+  "lifecycle": "alpha",
+  "planeLayer": 0,
+  "foundationPin": "v1",
+  "maintainers": [{ "team": "operator" }],
+  "exposes": {
+    "renderSurfaces": [{ "kind": "obs-plugin", "id": "obs-wave-output" }]
+  },
+  "consumes": {
+    "waveProducts": [
+      { "repo": "wave-av/wave-gateway", "endpoint": "/ingest/srt/{stream-key}" }
+    ],
+    "thirdParty": [
+      { "service": "obsproject-libobs", "licenseGated": false },
+      { "service": "haivision-libsrt", "licenseGated": false }
+    ],
+    "foundationFrameworks": ["frameworks/protocol-plane", "frameworks/platform-registry"]
+  },
+  "events": {
+    "publishes": [
+      { "topic": "obs-plugin.push.failed", "transport": "sentry" }
+    ]
+  },
+  "tags": ["operator", "public", "obs", "srt", "gpl-2", "on-prem", "build-on-wave"]
+}
