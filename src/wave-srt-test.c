@@ -67,6 +67,37 @@ static void test_parse_url_with_streamid(void)
 	       "streamid value");
 }
 
+static void test_parse_url_multi_query_params(void)
+{
+	/* Regression: with multiple query params, streamid must terminate at
+	 * the next '&' rather than bleeding the trailing params through to
+	 * libsrt's SRTO_STREAMID. (CR PR#5) */
+	char scratch[256];
+	struct wave_srt_url u;
+	int rc = wave_srt_parse_url(
+	        "wave://ingest.wave.online?streamid=op_jake_2026&mode=live", &u,
+	        scratch, sizeof(scratch));
+	EXPECT(rc == WAVE_SRT_OK, "multi-param URL parses");
+	EXPECT(strcmp(u.host, "ingest.wave.online") == 0, "host");
+	EXPECT(u.streamid != NULL &&
+	               strcmp(u.streamid, "op_jake_2026") == 0,
+	       "streamid terminated at &");
+}
+
+static void test_parse_url_streamid_after_other(void)
+{
+	/* streamid= as the second param. */
+	char scratch[256];
+	struct wave_srt_url u;
+	int rc = wave_srt_parse_url(
+	        "wave://host?mode=live&streamid=op_jake_2026", &u, scratch,
+	        sizeof(scratch));
+	EXPECT(rc == WAVE_SRT_OK, "streamid as 2nd param");
+	EXPECT(u.streamid != NULL &&
+	               strcmp(u.streamid, "op_jake_2026") == 0,
+	       "streamid value when not first param");
+}
+
 static void test_parse_rejects_bare_host(void)
 {
 	char scratch[256];
@@ -142,6 +173,8 @@ int main(void)
 	test_parse_wave_url();
 	test_parse_srt_url_no_port();
 	test_parse_url_with_streamid();
+	test_parse_url_multi_query_params();
+	test_parse_url_streamid_after_other();
 	test_parse_rejects_bare_host();
 	test_parse_rejects_bad_scheme();
 	test_parse_rejects_empty_host();

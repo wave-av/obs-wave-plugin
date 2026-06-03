@@ -103,16 +103,34 @@ int wave_srt_open(const char *url, const char *stream_key)
 		return WAVE_SRT_E_LIBSRT;
 	}
 
-	/* Caller mode + non-blocking send + low-latency live preset.
+	/* Pre-connect socket options. We DO NOT flip SRTO_SNDSYN here:
+	 *   - SRTO_SNDSYN governs both connect() AND send(). Setting it false
+	 *     before connect would make srt_connect() return success before
+	 *     the handshake completes, then OBS would start sending into a
+	 *     half-open socket and the first frames would fail (Sentry HIGH
+	 *     on PR#5). The fix is to leave SNDSYN at its default (true)
+	 *     across connect and flip it to false only after the handshake
+	 *     returns success.
 	 * SRTO_LATENCY=120ms matches the wave-desktop encoder default. */
 	int latency = 120;
 	int payload_size = 1316; /* MPEG-TS 7 packets * 188B */
-	bool sndsyn = false;
-	srt_setsockflag(s, SRTO_PAYLOADSIZE, &payload_size, sizeof(payload_size));
-	srt_setsockflag(s, SRTO_LATENCY, &latency, sizeof(latency));
-	srt_setsockflag(s, SRTO_SNDSYN, &sndsyn, sizeof(sndsyn));
-	srt_setsockflag(s, SRTO_STREAMID, final_streamid,
-	                (int)strlen(final_streamid));
+	#define SRT_SETOPT_OR_FAIL(opt, valp, len, name)                          \
+		do {                                                              \
+			if (srt_setsockflag(s, (opt), (valp), (len)) == SRT_ERROR) { \
+				WSRT_LOG(LOG_ERROR,                               \
+				         "srt_setsockflag(" name "): %s",         \
+				         srt_getlasterror_str());                 \
+				srt_close(s);                                     \
+				return WAVE_SRT_E_LIBSRT;                         \
+			}                                                         \
+		} while (0)
+	SRT_SETOPT_OR_FAIL(SRTO_PAYLOADSIZE, &payload_size,
+	                   sizeof(payload_size), "SRTO_PAYLOADSIZE");
+	SRT_SETOPT_OR_FAIL(SRTO_LATENCY, &latency, sizeof(latency),
+	                   "SRTO_LATENCY");
+	SRT_SETOPT_OR_FAIL(SRTO_STREAMID, final_streamid,
+	                   (int)strlen(final_streamid), "SRTO_STREAMID");
+	#undef SRT_SETOPT_OR_FAIL
 
 	/* Resolve host. We use libsrt's resolver via srt_connect with a
 	 * sockaddr filled from getaddrinfo, so we get DNS for free. */
@@ -140,6 +158,22 @@ int wave_srt_open(const char *url, const char *stream_key)
 		return WAVE_SRT_E_CONNECT;
 	}
 
+	/* Post-connect: now that the handshake completed successfully, flip
+	 * sends to non-blocking so the OBS encoder thread never stalls. We
+	 * also flip RCVSYN false for symmetry (we never read, but if a future
+	 * keepalive does, it must not block either). If the post-connect
+	 * setsockflag fails, treat as a hard error — we'd otherwise leak a
+	 * misconfigured live socket. (Sentry HIGH + CR Major PR#5) */
+	bool sndsyn = false;
+	bool rcvsyn = false;
+	if (srt_setsockflag(s, SRTO_SNDSYN, &sndsyn, sizeof(sndsyn)) == SRT_ERROR ||
+	    srt_setsockflag(s, SRTO_RCVSYN, &rcvsyn, sizeof(rcvsyn)) == SRT_ERROR) {
+		WSRT_LOG(LOG_ERROR, "post-connect SNDSYN/RCVSYN flip failed: %s",
+		         srt_getlasterror_str());
+		srt_close(s);
+		return WAVE_SRT_E_LIBSRT;
+	}
+
 	pthread_mutex_lock(&g_state.lock);
 	g_state.sock = s;
 	pthread_mutex_unlock(&g_state.lock);
@@ -154,36 +188,52 @@ int wave_srt_push(const uint8_t *buf, size_t len)
 	if (!buf || len == 0)
 		return WAVE_SRT_E_BAD_URL;
 
+	/* Hold the lock for the entire srt_send() critical section, not just
+	 * the handle read. Otherwise wave_srt_close() can tear down the
+	 * socket between the snapshot and the send, which is exactly the
+	 * race the mutex was meant to prevent (CR Critical PR#5). Sends are
+	 * non-blocking post-connect (SRTO_SNDSYN=false) so this lock is
+	 * bounded — libsrt returns SRT_EASYNCSND immediately on buffer full. */
 	pthread_mutex_lock(&g_state.lock);
 	SRTSOCKET s = g_state.sock;
-	pthread_mutex_unlock(&g_state.lock);
-
-	if (s == SRT_INVALID_SOCK)
+	if (s == SRT_INVALID_SOCK) {
+		pthread_mutex_unlock(&g_state.lock);
 		return WAVE_SRT_E_CLOSED;
+	}
 
 	int sent = srt_send(s, (const char *)buf, (int)len);
+	int rej = 0;
+	int errcode = 0;
 	if (sent == SRT_ERROR) {
-		int rej = srt_getrejectreason(s);
-		int errcode = srt_getlasterror(NULL);
-		/* SRT_EASYNCSND maps to our WOULDBLOCK; caller drops the frame. */
-		if (errcode == SRT_EASYNCSND)
-			return WAVE_SRT_E_WOULDBLOCK;
-		WSRT_LOG(LOG_ERROR, "srt_send failed: %s (reject=%d)",
-		         srt_getlasterror_str(), rej);
-		return WAVE_SRT_E_LIBSRT;
+		rej = srt_getrejectreason(s);
+		errcode = srt_getlasterror(NULL);
 	}
-	return WAVE_SRT_OK;
+	pthread_mutex_unlock(&g_state.lock);
+
+	if (sent != SRT_ERROR)
+		return WAVE_SRT_OK;
+
+	/* SRT_EASYNCSND maps to our WOULDBLOCK; caller drops the frame. */
+	if (errcode == SRT_EASYNCSND)
+		return WAVE_SRT_E_WOULDBLOCK;
+	WSRT_LOG(LOG_ERROR, "srt_send failed: %s (reject=%d)",
+	         srt_getlasterror_str(), rej);
+	return WAVE_SRT_E_LIBSRT;
 }
 
 void wave_srt_close(void)
 {
+	/* Hold the lock across srt_close() too. If we released the lock
+	 * before srt_close(), a wave_srt_push() running on the encoder
+	 * thread could still be inside srt_send() with the same handle.
+	 * The push path takes the same lock, so this serializes them
+	 * cleanly (CR Critical PR#5). */
 	pthread_mutex_lock(&g_state.lock);
 	SRTSOCKET s = g_state.sock;
 	g_state.sock = SRT_INVALID_SOCK;
-	pthread_mutex_unlock(&g_state.lock);
-
 	if (s != SRT_INVALID_SOCK) {
 		srt_close(s);
 		WSRT_LOG(LOG_INFO, "socket closed");
 	}
+	pthread_mutex_unlock(&g_state.lock);
 }

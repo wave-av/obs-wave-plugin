@@ -30,33 +30,44 @@ endif()
 
 # Resolve libsrt (Homebrew / apt / vcpkg / Chocolatey all provide a
 # srt-config.cmake). We require the C API only; no SRT::SocketGroup.
-find_package(srt CONFIG QUIET)
-if(NOT srt_FOUND)
-	find_package(PkgConfig QUIET)
-	if(PkgConfig_FOUND)
-		pkg_check_modules(SRT REQUIRED IMPORTED_TARGET srt)
-	else()
-		message(FATAL_ERROR
-			"libsrt not found. Install via `brew install srt` (macOS),"
-			" `apt install libsrt-openssl-dev` (Debian), or set"
-			" CMAKE_PREFIX_PATH to your libsrt install root.")
+#
+# Two gates per cubic PR#5 P2: setting WAVE_BUILD_PLUGIN=OFF skips libsrt
+# entirely so the parser-only CTest target builds on machines without a
+# libsrt install (e.g. CI runners that only want to exercise wave-srt-test).
+option(WAVE_BUILD_PLUGIN "Build the libobs plugin module (requires libsrt)" ON)
+
+if(WAVE_BUILD_PLUGIN)
+	find_package(srt CONFIG QUIET)
+	if(NOT srt_FOUND)
+		find_package(PkgConfig QUIET)
+		if(PkgConfig_FOUND)
+			pkg_check_modules(SRT REQUIRED IMPORTED_TARGET srt)
+		else()
+			message(FATAL_ERROR
+				"libsrt not found. Install via `brew install srt` (macOS),"
+				" `apt install libsrt-openssl-dev` (Debian),"
+				" `choco install srt` (Windows), or set"
+				" CMAKE_PREFIX_PATH to your libsrt install root."
+				" Re-run with -DWAVE_BUILD_PLUGIN=OFF to build the"
+				" parser-only test target without libsrt.")
+		endif()
 	endif()
-endif()
 
-add_library(wave-output MODULE
-	src/plugin-main.c
-	src/wave-output.c
-	src/wave-properties.c
-	src/wave-srt.c
-	src/wave-srt-parse.c)
+	add_library(wave-output MODULE
+		src/plugin-main.c
+		src/wave-output.c
+		src/wave-properties.c
+		src/wave-srt.c
+		src/wave-srt-parse.c)
 
-target_include_directories(wave-output PRIVATE src)
+	target_include_directories(wave-output PRIVATE src)
 
-target_link_libraries(wave-output PRIVATE OBS::libobs)
-if(TARGET srt::srt)
-	target_link_libraries(wave-output PRIVATE srt::srt)
-elseif(TARGET PkgConfig::SRT)
-	target_link_libraries(wave-output PRIVATE PkgConfig::SRT)
+	target_link_libraries(wave-output PRIVATE OBS::libobs)
+	if(TARGET srt::srt)
+		target_link_libraries(wave-output PRIVATE srt::srt)
+	elseif(TARGET PkgConfig::SRT)
+		target_link_libraries(wave-output PRIVATE PkgConfig::SRT)
+	endif()
 endif()
 
 # Parser-only unit test — stdlib + the test stub, no libsrt, no libobs.
@@ -72,15 +83,17 @@ if(BUILD_TESTING)
 	add_test(NAME wave-srt-parser COMMAND wave-srt-test)
 endif()
 
-set_target_properties(wave-output PROPERTIES
-	PREFIX ""
-	OUTPUT_NAME "wave-output"
-	FOLDER "plugins")
+if(WAVE_BUILD_PLUGIN)
+	set_target_properties(wave-output PROPERTIES
+		PREFIX ""
+		OUTPUT_NAME "wave-output"
+		FOLDER "plugins")
 
-# Locale ships alongside the plugin binary so obs_module_text() can find it.
-install(FILES data/locale/en-US.ini
-	DESTINATION "wave-output/data/locale")
+	# Locale ships alongside the plugin binary so obs_module_text() can find it.
+	install(FILES data/locale/en-US.ini
+		DESTINATION "wave-output/data/locale")
 
-install(TARGETS wave-output
-	LIBRARY DESTINATION "wave-output/bin/64bit"
-	RUNTIME DESTINATION "wave-output/bin/64bit")
+	install(TARGETS wave-output
+		LIBRARY DESTINATION "wave-output/bin/64bit"
+		RUNTIME DESTINATION "wave-output/bin/64bit")
+endif()

@@ -40,14 +40,22 @@ int wave_srt_parse_url(const char *url, struct wave_srt_url *out, char *scratch,
 	out->port = 6000;
 	out->streamid = NULL;
 
-	/* Split on '?' to peel off the query. */
+	/* Split on '?' to peel off the query. We support a single `streamid=`
+	 * pair anywhere in the query string. The value is terminated at the
+	 * next `&` (or end-of-string) so multi-param URLs like
+	 * `wave://host?streamid=foo&mode=live` don't bleed the trailing
+	 * params into the streamid passed to libsrt. (CR PR#5) */
 	char *q = strchr(scratch, '?');
 	if (q) {
 		*q = '\0';
-		const char *params = q + 1;
-		const char *sid = strstr(params, "streamid=");
-		if (sid)
+		char *params = q + 1;
+		char *sid = strstr(params, "streamid=");
+		if (sid) {
 			out->streamid = sid + 9;
+			char *amp = strchr(out->streamid, '&');
+			if (amp)
+				*amp = '\0';
+		}
 	}
 
 	/* Split on ':' for the port. IPv6 (bracketed) is not yet supported —
