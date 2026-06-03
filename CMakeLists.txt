@@ -28,24 +28,72 @@ if(NOT libobs_FOUND)
 	find_package(libobs MODULE REQUIRED)
 endif()
 
-add_library(wave-output MODULE
-	src/plugin-main.c
-	src/wave-output.c
-	src/wave-properties.c)
+# Resolve libsrt (Homebrew / apt / vcpkg / Chocolatey all provide a
+# srt-config.cmake). We require the C API only; no SRT::SocketGroup.
+#
+# Two gates per cubic PR#5 P2: setting WAVE_BUILD_PLUGIN=OFF skips libsrt
+# entirely so the parser-only CTest target builds on machines without a
+# libsrt install (e.g. CI runners that only want to exercise wave-srt-test).
+option(WAVE_BUILD_PLUGIN "Build the libobs plugin module (requires libsrt)" ON)
 
-target_include_directories(wave-output PRIVATE src)
+if(WAVE_BUILD_PLUGIN)
+	find_package(srt CONFIG QUIET)
+	if(NOT srt_FOUND)
+		find_package(PkgConfig QUIET)
+		if(PkgConfig_FOUND)
+			pkg_check_modules(SRT REQUIRED IMPORTED_TARGET srt)
+		else()
+			message(FATAL_ERROR
+				"libsrt not found. Install via `brew install srt` (macOS),"
+				" `apt install libsrt-openssl-dev` (Debian),"
+				" `choco install srt` (Windows), or set"
+				" CMAKE_PREFIX_PATH to your libsrt install root."
+				" Re-run with -DWAVE_BUILD_PLUGIN=OFF to build the"
+				" parser-only test target without libsrt.")
+		endif()
+	endif()
 
-target_link_libraries(wave-output PRIVATE OBS::libobs)
+	add_library(wave-output MODULE
+		src/plugin-main.c
+		src/wave-output.c
+		src/wave-properties.c
+		src/wave-srt.c
+		src/wave-srt-parse.c)
 
-set_target_properties(wave-output PROPERTIES
-	PREFIX ""
-	OUTPUT_NAME "wave-output"
-	FOLDER "plugins")
+	target_include_directories(wave-output PRIVATE src)
 
-# Locale ships alongside the plugin binary so obs_module_text() can find it.
-install(FILES data/locale/en-US.ini
-	DESTINATION "wave-output/data/locale")
+	target_link_libraries(wave-output PRIVATE OBS::libobs)
+	if(TARGET srt::srt)
+		target_link_libraries(wave-output PRIVATE srt::srt)
+	elseif(TARGET PkgConfig::SRT)
+		target_link_libraries(wave-output PRIVATE PkgConfig::SRT)
+	endif()
+endif()
 
-install(TARGETS wave-output
-	LIBRARY DESTINATION "wave-output/bin/64bit"
-	RUNTIME DESTINATION "wave-output/bin/64bit")
+# Parser-only unit test — stdlib + the test stub, no libsrt, no libobs.
+# Run via `cmake --build . --target wave-srt-test && ctest`.
+include(CTest)
+if(BUILD_TESTING)
+	add_executable(wave-srt-test
+		src/wave-srt-parse.c
+		src/wave-srt-test-stub.c
+		src/wave-srt-test.c)
+	target_include_directories(wave-srt-test PRIVATE src)
+	target_compile_definitions(wave-srt-test PRIVATE WAVE_SRT_NO_OBS_LOG)
+	add_test(NAME wave-srt-parser COMMAND wave-srt-test)
+endif()
+
+if(WAVE_BUILD_PLUGIN)
+	set_target_properties(wave-output PROPERTIES
+		PREFIX ""
+		OUTPUT_NAME "wave-output"
+		FOLDER "plugins")
+
+	# Locale ships alongside the plugin binary so obs_module_text() can find it.
+	install(FILES data/locale/en-US.ini
+		DESTINATION "wave-output/data/locale")
+
+	install(TARGETS wave-output
+		LIBRARY DESTINATION "wave-output/bin/64bit"
+		RUNTIME DESTINATION "wave-output/bin/64bit")
+endif()
