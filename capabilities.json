@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1",
   "repo": "wave-av/obs-wave-plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "lifecycle": "alpha",
   "planeLayer": 0,
   "foundationPin": "v1",
