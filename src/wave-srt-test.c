@@ -35,8 +35,7 @@ static void test_parse_wave_url(void)
 {
 	char scratch[256];
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url("wave://ingest.wave.online:6000", &u,
-	                            scratch, sizeof(scratch));
+	int rc = wave_srt_parse_url("wave://ingest.wave.online:6000", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_OK, "wave:// with port should parse");
 	EXPECT(strcmp(u.host, "ingest.wave.online") == 0, "host");
 	EXPECT(u.port == 6000, "port");
@@ -47,8 +46,7 @@ static void test_parse_srt_url_no_port(void)
 {
 	char scratch[256];
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url("srt://example.com", &u, scratch,
-	                            sizeof(scratch));
+	int rc = wave_srt_parse_url("srt://example.com", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_OK, "srt:// no port");
 	EXPECT(strcmp(u.host, "example.com") == 0, "host");
 	EXPECT(u.port == 6000, "default port");
@@ -58,13 +56,10 @@ static void test_parse_url_with_streamid(void)
 {
 	char scratch[256];
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url(
-	        "wave://ingest.wave.online?streamid=op_jake_2026", &u,
-	        scratch, sizeof(scratch));
+	int rc = wave_srt_parse_url("wave://ingest.wave.online?streamid=op_jake_2026", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_OK, "streamid");
 	EXPECT(strcmp(u.host, "ingest.wave.online") == 0, "host");
-	EXPECT(u.streamid != NULL && strcmp(u.streamid, "op_jake_2026") == 0,
-	       "streamid value");
+	EXPECT(u.streamid != NULL && strcmp(u.streamid, "op_jake_2026") == 0, "streamid value");
 }
 
 static void test_parse_url_multi_query_params(void)
@@ -74,14 +69,11 @@ static void test_parse_url_multi_query_params(void)
 	 * libsrt's SRTO_STREAMID. (CR PR#5) */
 	char scratch[256];
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url(
-	        "wave://ingest.wave.online?streamid=op_jake_2026&mode=live", &u,
-	        scratch, sizeof(scratch));
+	int rc = wave_srt_parse_url("wave://ingest.wave.online?streamid=op_jake_2026&mode=live", &u, scratch,
+				    sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_OK, "multi-param URL parses");
 	EXPECT(strcmp(u.host, "ingest.wave.online") == 0, "host");
-	EXPECT(u.streamid != NULL &&
-	               strcmp(u.streamid, "op_jake_2026") == 0,
-	       "streamid terminated at &");
+	EXPECT(u.streamid != NULL && strcmp(u.streamid, "op_jake_2026") == 0, "streamid terminated at &");
 }
 
 static void test_parse_url_streamid_after_other(void)
@@ -89,21 +81,16 @@ static void test_parse_url_streamid_after_other(void)
 	/* streamid= as the second param. */
 	char scratch[256];
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url(
-	        "wave://host?mode=live&streamid=op_jake_2026", &u, scratch,
-	        sizeof(scratch));
+	int rc = wave_srt_parse_url("wave://host?mode=live&streamid=op_jake_2026", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_OK, "streamid as 2nd param");
-	EXPECT(u.streamid != NULL &&
-	               strcmp(u.streamid, "op_jake_2026") == 0,
-	       "streamid value when not first param");
+	EXPECT(u.streamid != NULL && strcmp(u.streamid, "op_jake_2026") == 0, "streamid value when not first param");
 }
 
 static void test_parse_rejects_bare_host(void)
 {
 	char scratch[256];
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url("example.com:6000", &u, scratch,
-	                            sizeof(scratch));
+	int rc = wave_srt_parse_url("example.com:6000", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_E_BAD_URL, "must require scheme");
 }
 
@@ -111,8 +98,7 @@ static void test_parse_rejects_bad_scheme(void)
 {
 	char scratch[256];
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url("http://example.com", &u, scratch,
-	                            sizeof(scratch));
+	int rc = wave_srt_parse_url("http://example.com", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_E_BAD_URL, "http:// not accepted");
 }
 
@@ -128,11 +114,9 @@ static void test_parse_rejects_out_of_range_port(void)
 {
 	char scratch[256];
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url("wave://example.com:99999", &u, scratch,
-	                            sizeof(scratch));
+	int rc = wave_srt_parse_url("wave://example.com:99999", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_E_BAD_URL, "port > 65535 rejected");
-	rc = wave_srt_parse_url("wave://example.com:0", &u, scratch,
-	                        sizeof(scratch));
+	rc = wave_srt_parse_url("wave://example.com:0", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_E_BAD_URL, "port 0 rejected");
 }
 
@@ -140,8 +124,7 @@ static void test_parse_handles_tiny_scratch(void)
 {
 	char scratch[8]; /* too small for "ingest.wave.online" */
 	struct wave_srt_url u;
-	int rc = wave_srt_parse_url("wave://ingest.wave.online", &u, scratch,
-	                            sizeof(scratch));
+	int rc = wave_srt_parse_url("wave://ingest.wave.online", &u, scratch, sizeof(scratch));
 	EXPECT(rc == WAVE_SRT_E_BAD_URL, "scratch too small rejected (no overrun)");
 }
 
@@ -149,22 +132,15 @@ static void test_parse_null_inputs(void)
 {
 	char scratch[64];
 	struct wave_srt_url u;
-	EXPECT(wave_srt_parse_url(NULL, &u, scratch, sizeof(scratch)) ==
-	               WAVE_SRT_E_BAD_URL,
-	       "NULL url");
-	EXPECT(wave_srt_parse_url("wave://x", NULL, scratch, sizeof(scratch)) ==
-	               WAVE_SRT_E_BAD_URL,
-	       "NULL out");
-	EXPECT(wave_srt_parse_url("wave://x", &u, NULL, 256) ==
-	               WAVE_SRT_E_BAD_URL,
-	       "NULL scratch");
+	EXPECT(wave_srt_parse_url(NULL, &u, scratch, sizeof(scratch)) == WAVE_SRT_E_BAD_URL, "NULL url");
+	EXPECT(wave_srt_parse_url("wave://x", NULL, scratch, sizeof(scratch)) == WAVE_SRT_E_BAD_URL, "NULL out");
+	EXPECT(wave_srt_parse_url("wave://x", &u, NULL, 256) == WAVE_SRT_E_BAD_URL, "NULL scratch");
 }
 
 static void test_strerror_known_codes(void)
 {
 	EXPECT(strcmp(wave_srt_strerror(WAVE_SRT_OK), "ok") == 0, "ok");
-	EXPECT(strstr(wave_srt_strerror(WAVE_SRT_E_BAD_URL), "URL") != NULL,
-	       "bad url message contains URL");
+	EXPECT(strstr(wave_srt_strerror(WAVE_SRT_E_BAD_URL), "URL") != NULL, "bad url message contains URL");
 	EXPECT(strcmp(wave_srt_strerror(9999), "unknown") == 0, "unknown");
 }
 

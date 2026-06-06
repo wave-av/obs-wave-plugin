@@ -91,8 +91,7 @@ int wave_srt_open(const char *url, const char *stream_key)
 	char final_streamid[WAVE_SRT_MAX_STREAMID + 1];
 	const char *src = parsed.streamid ? parsed.streamid : stream_key;
 	if (strlen(src) > WAVE_SRT_MAX_STREAMID) {
-		WSRT_LOG(LOG_ERROR, "streamid too long (%zu > %d)",
-		         strlen(src), WAVE_SRT_MAX_STREAMID);
+		WSRT_LOG(LOG_ERROR, "streamid too long (%zu > %d)", strlen(src), WAVE_SRT_MAX_STREAMID);
 		return WAVE_SRT_E_BAD_URL;
 	}
 	snprintf(final_streamid, sizeof(final_streamid), "%s", src);
@@ -114,7 +113,7 @@ int wave_srt_open(const char *url, const char *stream_key)
 	 * SRTO_LATENCY=120ms matches the wave-desktop encoder default. */
 	int latency = 120;
 	int payload_size = 1316; /* MPEG-TS 7 packets * 188B */
-	#define SRT_SETOPT_OR_FAIL(opt, valp, len, name)                          \
+#define SRT_SETOPT_OR_FAIL(opt, valp, len, name)                          \
 		do {                                                              \
 			if (srt_setsockflag(s, (opt), (valp), (len)) == SRT_ERROR) { \
 				WSRT_LOG(LOG_ERROR,                               \
@@ -124,13 +123,10 @@ int wave_srt_open(const char *url, const char *stream_key)
 				return WAVE_SRT_E_LIBSRT;                         \
 			}                                                         \
 		} while (0)
-	SRT_SETOPT_OR_FAIL(SRTO_PAYLOADSIZE, &payload_size,
-	                   sizeof(payload_size), "SRTO_PAYLOADSIZE");
-	SRT_SETOPT_OR_FAIL(SRTO_LATENCY, &latency, sizeof(latency),
-	                   "SRTO_LATENCY");
-	SRT_SETOPT_OR_FAIL(SRTO_STREAMID, final_streamid,
-	                   (int)strlen(final_streamid), "SRTO_STREAMID");
-	#undef SRT_SETOPT_OR_FAIL
+	SRT_SETOPT_OR_FAIL(SRTO_PAYLOADSIZE, &payload_size, sizeof(payload_size), "SRTO_PAYLOADSIZE");
+	SRT_SETOPT_OR_FAIL(SRTO_LATENCY, &latency, sizeof(latency), "SRTO_LATENCY");
+	SRT_SETOPT_OR_FAIL(SRTO_STREAMID, final_streamid, (int)strlen(final_streamid), "SRTO_STREAMID");
+#undef SRT_SETOPT_OR_FAIL
 
 	/* Resolve host. We use libsrt's resolver via srt_connect with a
 	 * sockaddr filled from getaddrinfo, so we get DNS for free. */
@@ -148,8 +144,7 @@ int wave_srt_open(const char *url, const char *stream_key)
 		srt_close(s);
 		return WAVE_SRT_E_CONNECT;
 	}
-	memcpy(&sa.sin_addr, &((struct sockaddr_in *)ai->ai_addr)->sin_addr,
-	       sizeof(sa.sin_addr));
+	memcpy(&sa.sin_addr, &((struct sockaddr_in *)ai->ai_addr)->sin_addr, sizeof(sa.sin_addr));
 	freeaddrinfo(ai);
 
 	if (srt_connect(s, (struct sockaddr *)&sa, sizeof(sa)) == SRT_ERROR) {
@@ -168,8 +163,7 @@ int wave_srt_open(const char *url, const char *stream_key)
 	bool rcvsyn = false;
 	if (srt_setsockflag(s, SRTO_SNDSYN, &sndsyn, sizeof(sndsyn)) == SRT_ERROR ||
 	    srt_setsockflag(s, SRTO_RCVSYN, &rcvsyn, sizeof(rcvsyn)) == SRT_ERROR) {
-		WSRT_LOG(LOG_ERROR, "post-connect SNDSYN/RCVSYN flip failed: %s",
-		         srt_getlasterror_str());
+		WSRT_LOG(LOG_ERROR, "post-connect SNDSYN/RCVSYN flip failed: %s", srt_getlasterror_str());
 		srt_close(s);
 		return WAVE_SRT_E_LIBSRT;
 	}
@@ -178,8 +172,7 @@ int wave_srt_open(const char *url, const char *stream_key)
 	g_state.sock = s;
 	pthread_mutex_unlock(&g_state.lock);
 
-	WSRT_LOG(LOG_INFO, "connected to %s:%u (streamid=%zuB)",
-	         parsed.host, parsed.port, strlen(final_streamid));
+	WSRT_LOG(LOG_INFO, "connected to %s:%u (streamid=%zuB)", parsed.host, parsed.port, strlen(final_streamid));
 	return WAVE_SRT_OK;
 }
 
@@ -216,8 +209,7 @@ int wave_srt_push(const uint8_t *buf, size_t len)
 	/* SRT_EASYNCSND maps to our WOULDBLOCK; caller drops the frame. */
 	if (errcode == SRT_EASYNCSND)
 		return WAVE_SRT_E_WOULDBLOCK;
-	WSRT_LOG(LOG_ERROR, "srt_send failed: %s (reject=%d)",
-	         srt_getlasterror_str(), rej);
+	WSRT_LOG(LOG_ERROR, "srt_send failed: %s (reject=%d)", srt_getlasterror_str(), rej);
 	return WAVE_SRT_E_LIBSRT;
 }
 

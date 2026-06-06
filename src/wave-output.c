@@ -70,8 +70,7 @@ static void *wave_output_create(obs_data_t *settings, obs_output_t *output)
 static void wave_output_destroy(void *data)
 {
 	struct wave_output_data *ctx = data;
-	blog(LOG_INFO, "[wave-output] destroy (capturing=%d transport_live=%d)",
-	     ctx->capturing, ctx->transport_live);
+	blog(LOG_INFO, "[wave-output] destroy (capturing=%d transport_live=%d)", ctx->capturing, ctx->transport_live);
 	/* Defensive — destroy is supposed to be called only after stop, but
 	 * close is idempotent and cheaper than a leaked socket. */
 	if (ctx->transport_live)
@@ -87,9 +86,7 @@ static bool wave_output_start(void *data)
 	const char *stream_key = obs_data_get_string(settings, "stream_key");
 
 	if (!stream_key || stream_key[0] == '\0') {
-		obs_output_set_last_error(
-			ctx->output,
-			obs_module_text("WAVE.Error.MissingStreamKey"));
+		obs_output_set_last_error(ctx->output, obs_module_text("WAVE.Error.MissingStreamKey"));
 		obs_data_release(settings);
 		blog(LOG_ERROR, "[wave-output] start refused: empty stream key");
 		return false;
@@ -99,15 +96,13 @@ static bool wave_output_start(void *data)
 	obs_data_release(settings);
 	if (rc != WAVE_SRT_OK) {
 		obs_output_set_last_error(ctx->output, wave_srt_strerror(rc));
-		blog(LOG_ERROR, "[wave-output] start failed: %s",
-		     wave_srt_strerror(rc));
+		blog(LOG_ERROR, "[wave-output] start failed: %s", wave_srt_strerror(rc));
 		return false;
 	}
 
 	ctx->transport_live = true;
 	if (!obs_output_can_begin_data_capture(ctx->output, 0)) {
-		blog(LOG_ERROR,
-		     "[wave-output] obs_output_can_begin_data_capture refused");
+		blog(LOG_ERROR, "[wave-output] obs_output_can_begin_data_capture refused");
 		wave_srt_close();
 		ctx->transport_live = false;
 		return false;
@@ -151,9 +146,7 @@ static void wave_output_encoded_packet(void *data, struct encoder_packet *packet
 		/* Send buffer full — drop the frame, log infrequently. The
 		 * encoder thread MUST keep moving; backpressure into libobs
 		 * here would stall the capture pipeline. */
-		blog(LOG_WARNING,
-		     "[wave-output] backpressure — dropped %zu-byte packet",
-		     packet->size);
+		blog(LOG_WARNING, "[wave-output] backpressure — dropped %zu-byte packet", packet->size);
 		return;
 	default:
 		/* Hard error — surface to OBS so its reconnect logic / UI
@@ -164,8 +157,7 @@ static void wave_output_encoded_packet(void *data, struct encoder_packet *packet
 		 * `capturing` — wave_output_stop() must still call
 		 * obs_output_end_data_capture() so libobs leaves capture
 		 * mode. (Sentry HIGH + CR Major PR#5) */
-		blog(LOG_ERROR, "[wave-output] push failed: %s",
-		     wave_srt_strerror(rc));
+		blog(LOG_ERROR, "[wave-output] push failed: %s", wave_srt_strerror(rc));
 		ctx->transport_live = false;
 		wave_srt_close();
 		obs_output_signal_stop(ctx->output, OBS_OUTPUT_DISCONNECTED);

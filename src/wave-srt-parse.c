@@ -79,12 +79,19 @@ int wave_srt_parse_url(const char *url, struct wave_srt_url *out, char *scratch,
 const char *wave_srt_strerror(int code)
 {
 	switch (code) {
-	case WAVE_SRT_OK:           return "ok";
-	case WAVE_SRT_E_BAD_URL:    return "invalid URL or arguments";
-	case WAVE_SRT_E_CONNECT:    return "connect failed";
-	case WAVE_SRT_E_WOULDBLOCK: return "send buffer full — frame dropped";
-	case WAVE_SRT_E_CLOSED:     return "socket not open";
-	case WAVE_SRT_E_LIBSRT:     return "libsrt internal error";
-	default:                    return "unknown";
+	case WAVE_SRT_OK:
+		return "ok";
+	case WAVE_SRT_E_BAD_URL:
+		return "invalid URL or arguments";
+	case WAVE_SRT_E_CONNECT:
+		return "connect failed";
+	case WAVE_SRT_E_WOULDBLOCK:
+		return "send buffer full — frame dropped";
+	case WAVE_SRT_E_CLOSED:
+		return "socket not open";
+	case WAVE_SRT_E_LIBSRT:
+		return "libsrt internal error";
+	default:
+		return "unknown";
 	}
 }
