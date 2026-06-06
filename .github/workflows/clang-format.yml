@@ -29,7 +29,6 @@ jobs:
 
       - name: Check formatting
         run: |
-          files=$(git ls-files '*.c' '*.h')
           echo "Checking:"
-          echo "$files"
-          clang-format --dry-run --Werror $files
+          git ls-files "*.c" "*.h"
+          git ls-files -z "*.c" "*.h" | xargs -0 -r clang-format --dry-run --Werror
