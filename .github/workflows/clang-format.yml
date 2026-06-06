@@ -25,10 +25,11 @@ jobs:
       - name: Install clang-format
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-format
+          sudo apt-get install -y clang-format-18
+          clang-format-18 --version
 
       - name: Check formatting
         run: |
           echo "Checking:"
           git ls-files "*.c" "*.h"
-          git ls-files -z "*.c" "*.h" | xargs -0 -r clang-format --dry-run --Werror
+          git ls-files -z "*.c" "*.h" | xargs -0 -r clang-format-18 --dry-run --Werror --
