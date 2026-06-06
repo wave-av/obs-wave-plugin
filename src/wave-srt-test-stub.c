@@ -25,6 +25,4 @@ int wave_srt_push(const uint8_t *buf, size_t len)
 	return WAVE_SRT_E_CLOSED;
 }
 
-void wave_srt_close(void)
-{
-}
+void wave_srt_close(void) {}

@@ -51,9 +51,9 @@ extern "C" {
  * test suite). Pointers reference the input buffer — do NOT free.
  */
 struct wave_srt_url {
-	const char *host;         /* zero-terminated; lives in input arena */
-	uint16_t port;            /* 6000 default if absent */
-	const char *streamid;     /* may be NULL — overridden by stream_key */
+	const char *host;     /* zero-terminated; lives in input arena */
+	uint16_t port;        /* 6000 default if absent */
+	const char *streamid; /* may be NULL — overridden by stream_key */
 };
 
 /*
