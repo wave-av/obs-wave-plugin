@@ -34,7 +34,7 @@ All notable changes documented here. Format: [Keep a Changelog](https://keepacha
   instructions per platform when neither is present. Adds CTest target
   `wave-srt-test` (parser-only, no libsrt link required for the test).
 - `data/locale/en-US.ini` — `WAVE.Error.MissingStreamKey` string.
-- `capabilities.json` bumped 0.1.0 → 0.2.0; the wave-gateway endpoint
+- `capabilities.json` bumped 0.1.0 → 0.2.0; the WAVE API gateway endpoint
   reference already pointed at `/ingest/srt/{stream-key}` and is now
   accurate.
 

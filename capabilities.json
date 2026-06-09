@@ -11,7 +11,7 @@
   },
   "consumes": {
     "waveProducts": [
-      { "repo": "wave-av/wave-gateway", "endpoint": "/ingest/srt/{stream-key}" }
+      { "repo": "wave-av/api-gateway", "endpoint": "/ingest/srt/{stream-key}" }
     ],
     "thirdParty": [
       { "service": "obsproject-libobs", "licenseGated": false },
