@@ -4,6 +4,12 @@ All notable changes documented here. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Added
+- `.github/workflows/governance-enforce.yml` — A_BLOCK governance gate
+  (diff-scoped secrets + hardcoded-path scan via `@wave-av/governance`),
+  vendored ahead of this repo's inclusion in the org
+  `governance-a-block-enforce` ruleset (claude-workstation#1624 E4 T4.9a).
+
 ## [0.2.0] — real SRT push (#176)
 
 ### Added
