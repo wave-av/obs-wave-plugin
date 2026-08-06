@@ -4,6 +4,14 @@ All notable changes documented here. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Added
+- `public-repo-guard` now scans PR/issue/comment BODIES, not just the tree:
+  new `body-guard` job (triggers on `issues`, `issue_comment`,
+  `pull_request_review_comment`, and PR `edited`) runs the new vendored
+  `scripts/public-repo-guard/body-policy.sh` (+ its fixture self-test) against
+  the event's title/body text. Fail-closed: a broken scanner is a red run,
+  never a silent pass.
+
 ## [0.2.0] — real SRT push (#176)
 
 ### Added

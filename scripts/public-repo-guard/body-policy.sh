@@ -52,16 +52,28 @@ check() {
   # Filter with rg, not grep: BSD/macOS grep has no -P, so a `grep -P` allowlist
   # silently errors out locally while working on GNU/CI — the gate would then
   # disagree with itself depending on where it ran. rg is already required above.
-  local matches
+  #
+  # The filters fail closed too. `-v` means rc 1 is the GOOD case (every hit was
+  # allowlisted), but rc >= 2 is a broken scanner, and swallowing it would turn a
+  # detection back into a pass — the exact fail-open this gate exists to prevent.
+  local matches frc
   matches="$(printf '%s' "$raw" \
-    | rg -vN -- 'guard:allow[[:space:]]+[^[:space:]]' || true)"
+    | rg -vN -- 'guard:allow[[:space:]]+[^[:space:]]')"; frc=$?
+  if (( frc >= 2 )); then
+    echo "::error title=public-repo-guard ($name)::ripgrep failed (exit $frc) applying the guard:allow filter for rule '$name' — failing closed."
+    exit 2
+  fi
   # The about-the-control allowlist exempts PROSE-shaped rules only. A credential
   # FORMAT (a live key, a private-key header) is never legitimate even on a line
   # that mentions SECURITY.md or this gate — "the key AKIA… was rotated, see
   # SECURITY.md" is still a leak. guard:allow remains the explicit escape hatch.
   case "$name" in
     internal-marker|private-repo-ops)
-      matches="$(printf '%s' "$matches" | rg -vNiP -- "$ABOUT_THE_CONTROL" || true)"
+      matches="$(printf '%s' "$matches" | rg -vNiP -- "$ABOUT_THE_CONTROL")"; frc=$?
+      if (( frc >= 2 )); then
+        echo "::error title=public-repo-guard ($name)::ripgrep failed (exit $frc) applying the about-the-control filter for rule '$name' — failing closed."
+        exit 2
+      fi
       ;;
   esac
   [[ -z "$matches" ]] && return 0
