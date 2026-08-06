@@ -152,8 +152,14 @@ if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
     # scoped to the repo NAMES only — a bare (?i) prefix would also lowercase the
     # OPS_DETAIL alternation, turning everyday identifiers like "cache_key" into
     # a SCREAMING_CASE credential-name match.
+    #
+    # No \b before OPS_DETAIL: its credential-name alternative can only start at
+    # the LAST underscore-separated segment of a multi-part name (WAVE_API_TOKEN
+    # matches at API_TOKEN), and that position is preceded by "_" — a word
+    # character — so a leading \b would never match and name-then-detail order
+    # would silently miss every multi-segment credential name.
     check BLOCK private-repo-ops \
-      "\\b(?i:${_ALT})\\b[^\\n]{0,140}?\\b${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
+      "\\b(?i:${_ALT})\\b[^\\n]{0,140}?${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
       'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public'
   fi
 fi

@@ -43,6 +43,11 @@ expect 1 'private repo + credential name' \
   'Flip is live: WAVE_VIEWPORT_LEASE_SECRET is bound on acme-private-alpha now.'
 expect 1 'private repo + credential name, reverse order' \
   'The MOQ_JOIN_SECRET was added; acme-private-beta picks it up on deploy.'
+# Regression: a \b once preceded the ops-detail pattern, and since a multi-segment
+# credential name can only match at its last segment (after "_", a word char),
+# name-then-detail order silently passed every multi-part name.
+expect 1 'private repo + multi-segment credential name after the repo' \
+  'acme-private-alpha now has WAVE_API_TOKEN set for the rollout.'
 expect 1 'private repo + secret count' \
   'acme-private-alpha went from 74 secrets to 75 after this change.'
 expect 1 'private repo + service binding' \
