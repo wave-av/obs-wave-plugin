@@ -35,6 +35,10 @@ on:
     types: [opened, edited]
   issue_comment:
     types: [created, edited]
+  # Inline code-review comments are just as world-readable as issue comments and
+  # were the one comment surface this gate did not scan.
+  pull_request_review_comment:
+    types: [created, edited]
   push:
     branches: [main, master]
   workflow_dispatch:
@@ -113,7 +117,11 @@ jobs:
   # can stop that class before publication.
   body-guard:
     name: Body content policy
-    if: github.event_name == 'pull_request' || github.event_name == 'issues' || github.event_name == 'issue_comment'
+    if: >-
+      github.event_name == 'pull_request'
+      || github.event_name == 'issues'
+      || github.event_name == 'issue_comment'
+      || github.event_name == 'pull_request_review_comment'
     concurrency:
       # Keyed on the specific PR / comment / issue rather than github.ref, because
       # issue events all report the default branch and a ref-keyed group would let
