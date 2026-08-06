@@ -39,6 +39,11 @@ on:
   # were the one comment surface this gate did not scan.
   pull_request_review_comment:
     types: [created, edited]
+  # A review's top-level summary body is a distinct text surface from its inline
+  # comments (the payload carries it under .review.body, not .comment.body) and
+  # is just as world-readable. Without this trigger, nothing ever scans it.
+  pull_request_review:
+    types: [submitted, edited]
   push:
     branches: [main, master]
   workflow_dispatch:
@@ -122,23 +127,25 @@ jobs:
       || github.event_name == 'issues'
       || github.event_name == 'issue_comment'
       || github.event_name == 'pull_request_review_comment'
+      || github.event_name == 'pull_request_review'
     concurrency:
       # Keyed on the specific comment / PR / issue rather than github.ref, because
       # issue events all report the default branch and a ref-keyed group would let
       # two comments cancel each other, leaving one unscanned.
       #
-      # comment.id is checked FIRST: a pull_request_review_comment payload also
-      # carries a pull_request object, so a PR-number-first chain would funnel all
-      # inline review comments on one PR into a single group — and GitHub keeps
-      # only ONE pending run per group, so a burst of comments would drop the
-      # middle one unscanned. Each comment is distinct content and gets its own
+      # comment.id / review.id are checked FIRST: pull_request_review_comment and
+      # pull_request_review payloads also carry a pull_request object, so a
+      # PR-number-first chain would funnel all inline review comments (and review
+      # summaries) on one PR into a single group — and GitHub keeps only ONE
+      # pending run per group, so a burst of comments would drop the middle one
+      # unscanned. Each comment/review is distinct content and gets its own
       # group; PR body edits still share the PR-number group, which is safe
       # because every run scans the full latest body.
       #
       # cancel-in-progress is deliberately FALSE. Every version of a body deserves a
       # verdict, the job is seconds long, and a cancelled check-run lingers on the
       # commit and makes an otherwise-green PR look broken.
-      group: public-repo-guard-body-${{ github.event.comment.id || github.event.pull_request.number || github.event.issue.number || github.ref }}
+      group: public-repo-guard-body-${{ github.event.comment.id || github.event.review.id || github.event.pull_request.number || github.event.issue.number || github.ref }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
@@ -167,12 +174,19 @@ jobs:
             echo "::error title=public-repo-guard (body-guard)::Event payload contains no pull_request/issue/comment object — refusing to report a pass on an unscanned body."
             exit 1
           fi
-          # Comment events scan ONLY the comment body. The enclosing issue/PR
-          # title and body have their own opened/edited events; re-scanning them
-          # here would make one stale leak in an old issue body fail every later
-          # comment's run — and those runs attach to the default branch, so main
-          # itself would look permanently broken for text no one just wrote.
+          # Comment/review events scan ONLY the new comment or review-summary
+          # body. The enclosing issue/PR title and body have their own
+          # opened/edited events; re-scanning them here would make one stale leak
+          # in an old issue body fail every later comment's run — and those runs
+          # attach to the default branch, so main itself would look permanently
+          # broken for text no one just wrote. The review branch must be tested
+          # BEFORE the pull_request fallback: a pull_request_review payload also
+          # carries the PR object, and falling through would scan the PR body
+          # while reporting a verdict on the review. (.review.body is null on a
+          # plain approve — select(. != null) leaves nothing to scan, which is
+          # correct: there is no text.)
           jq -r 'if has("comment") then [.comment.body]
+                 elif has("review") then [.review.body]
                  else [.pull_request.title, .pull_request.body,
                        .issue.title, .issue.body] end
                  | map(select(. != null)) | join("\n")' \
@@ -182,4 +196,11 @@ jobs:
       - name: body policy (PR / issue / comment text)
         env:
           GUARD_PRIVATE_REPOS: ${{ vars.GUARD_PRIVATE_REPOS }}
+          # GitHub withholds configuration variables from pull_request-family
+          # runs raised from FORKS, so an empty GUARD_PRIVATE_REPOS there is a
+          # platform limitation, not a misconfiguration — body-policy.sh skips
+          # the private-repo rule with a visible warning. Everywhere else the
+          # variable must be set, and the script FAILS CLOSED on an empty one
+          # rather than green-stamping a body its main rule never examined.
+          GUARD_PRIVATE_REPOS_REQUIRED: ${{ github.event.pull_request.head.repo.fork != true && '1' || '' }}
         run: bash scripts/public-repo-guard/body-policy.sh "$RUNNER_TEMP/bodyscan/body.txt"

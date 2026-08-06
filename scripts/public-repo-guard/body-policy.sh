@@ -136,7 +136,28 @@ check BLOCK internal-marker  '(?<![“"'"'"'`])\b(internal[- ]only|do\s+not\s+(s
 # of what is wired to what, and it is the shape that actually leaked.
 #
 # Names are NOT hardcoded (this file is public); CI injects them via the
-# GUARD_PRIVATE_REPOS variable. Unset locally → this check is skipped.
+# GUARD_PRIVATE_REPOS variable.
+#
+# An EMPTY variable in CI is two different conditions, and they get opposite
+# treatment. GitHub does not pass configuration variables to pull_request-family
+# runs raised from forks, so the workflow sets GUARD_PRIVATE_REPOS_REQUIRED only
+# when the event is NOT a fork PR:
+#   required + empty     → misconfiguration (variable renamed or never defined).
+#     The one rule this script was written for would silently not run, so FAIL
+#     CLOSED — a green pass over an unexamined body is the exact failure mode
+#     this gate exists to prevent.
+#   not required + empty → fork-PR context where the platform withholds vars.
+#     Failing red would block every fork contribution on configuration the run
+#     can never see, so the rule is skipped — but LOUDLY, via a warning
+#     annotation, never as a silent pass.
+# Unset locally (no GITHUB_ACTIONS) → skipped without ceremony, as before.
+if [[ -z "${GUARD_PRIVATE_REPOS:-}" && -n "${GITHUB_ACTIONS:-}" ]]; then
+  if [[ -n "${GUARD_PRIVATE_REPOS_REQUIRED:-}" ]]; then
+    echo "::error title=public-repo-guard (private-repo-ops)::GUARD_PRIVATE_REPOS is empty in a context where it must be set — the private-repo rule would silently not run. Define the org/repo variable — failing closed."
+    exit 2
+  fi
+  echo "::warning title=public-repo-guard (private-repo-ops)::GUARD_PRIVATE_REPOS is unavailable (GitHub withholds configuration variables from fork pull requests) — the private-repo rule was SKIPPED for this run; all other rules still applied."
+fi
 if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
   OPS_DETAIL='(?:[A-Z][A-Z0-9]*_(?:SECRET|TOKEN|KEY|PASSWORD)|wrangler\s+secret|secret\s+(?:is\s+)?(?:bound|binding|list)|(?:is\s+)?bound\s+on|service\s+binding|\d{2,}\s+secrets)'
   _ALT=''

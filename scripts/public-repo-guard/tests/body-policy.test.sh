@@ -115,6 +115,37 @@ for case in "no argument at all::" "nonexistent path::$TMP/does-not-exist.txt"; 
   fi
 done
 
+# GUARD_PRIVATE_REPOS empty under CI (GITHUB_ACTIONS). Two contexts, opposite
+# verdicts: where the workflow marks the variable REQUIRED (anything but a fork
+# PR), empty means misconfigured and the main rule would silently not run → must
+# fail closed. In a fork-PR context GitHub withholds configuration variables, so
+# the run passes — but must carry a visible warning; a SILENT pass is the bug.
+printf 'Ordinary clean body with nothing to find.\n' > "$TMP/clean.txt"
+
+env -u GUARD_PRIVATE_REPOS GITHUB_ACTIONS=true GUARD_PRIVATE_REPOS_REQUIRED=1 \
+  bash "$SCRIPT" "$TMP/clean.txt" >/dev/null 2>&1; rc=$?
+if [[ "$rc" == 2 ]]; then
+  PASS=$((PASS+1)); printf '  ok   empty GUARD_PRIVATE_REPOS where required → exit 2 (fails closed)\n'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL empty GUARD_PRIVATE_REPOS where required — want exit 2, got %s\n' "$rc"
+fi
+
+out="$(env -u GUARD_PRIVATE_REPOS -u GUARD_PRIVATE_REPOS_REQUIRED GITHUB_ACTIONS=true \
+  bash "$SCRIPT" "$TMP/clean.txt" 2>&1)"; rc=$?
+if [[ "$rc" == 0 ]] && printf '%s\n' "$out" | grep -q '^::warning'; then
+  PASS=$((PASS+1)); printf '  ok   empty GUARD_PRIVATE_REPOS on a fork PR → passes WITH a warning\n'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL empty GUARD_PRIVATE_REPOS on a fork PR — want exit 0 + ::warning, got exit %s\n%s\n' "$rc" "$out"
+fi
+
+out="$(env -u GUARD_PRIVATE_REPOS -u GUARD_PRIVATE_REPOS_REQUIRED -u GITHUB_ACTIONS \
+  bash "$SCRIPT" "$TMP/clean.txt" 2>&1)"; rc=$?
+if [[ "$rc" == 0 ]] && ! printf '%s\n' "$out" | grep -q '^::'; then
+  PASS=$((PASS+1)); printf '  ok   empty GUARD_PRIVATE_REPOS locally → quiet skip\n'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL empty GUARD_PRIVATE_REPOS locally — want exit 0, no annotations, got exit %s\n%s\n' "$rc" "$out"
+fi
+
 echo "  ---"
 if (( FAIL > 0 )); then
   echo "  $PASS passed, $FAIL FAILED"; exit 1
