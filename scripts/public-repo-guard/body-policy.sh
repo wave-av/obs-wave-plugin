@@ -25,6 +25,9 @@ set -uo pipefail
 FILE="${1:-}"
 [[ -n "$FILE" && -f "$FILE" ]] || { echo "::error::body-policy: usage: body-policy.sh <file>"; exit 2; }
 command -v rg >/dev/null 2>&1 || { echo "::error::body-policy: ripgrep (rg) required"; exit 2; }
+# Every rule below uses -P. A ripgrep built without PCRE2 (e.g. Ubuntu 22.04's apt
+# package) would make every check exit 2; fail up front with a diagnosis instead.
+rg --pcre2-version >/dev/null 2>&1 || { echo "::error::body-policy: ripgrep must be built with PCRE2 support (rg --pcre2-version failed) — install a PCRE2-enabled build"; exit 2; }
 
 VIOLATIONS=0
 
@@ -51,8 +54,16 @@ check() {
   # disagree with itself depending on where it ran. rg is already required above.
   local matches
   matches="$(printf '%s' "$raw" \
-    | rg -vN -- 'guard:allow[[:space:]]+[^[:space:]]' \
-    | rg -vNiP -- "$ABOUT_THE_CONTROL" || true)"
+    | rg -vN -- 'guard:allow[[:space:]]+[^[:space:]]' || true)"
+  # The about-the-control allowlist exempts PROSE-shaped rules only. A credential
+  # FORMAT (a live key, a private-key header) is never legitimate even on a line
+  # that mentions SECURITY.md or this gate — "the key AKIA… was rotated, see
+  # SECURITY.md" is still a leak. guard:allow remains the explicit escape hatch.
+  case "$name" in
+    internal-marker|private-repo-ops)
+      matches="$(printf '%s' "$matches" | rg -vNiP -- "$ABOUT_THE_CONTROL" || true)"
+      ;;
+  esac
   [[ -z "$matches" ]] && return 0
   local count; count="$(printf '%s\n' "$matches" | grep -c '')"
   # Print the LINE NUMBER only — never the matched text. This annotation is itself
@@ -125,9 +136,12 @@ if [[ -n "${GUARD_PRIVATE_REPOS:-}" ]]; then
     _ALT="${_ALT:+$_ALT|}${_esc}"
   done
   if [[ -n "$_ALT" ]]; then
-    # Both orders: name-then-detail and detail-then-name.
+    # Both orders: name-then-detail and detail-then-name. Case-insensitivity is
+    # scoped to the repo NAMES only — a bare (?i) prefix would also lowercase the
+    # OPS_DETAIL alternation, turning everyday identifiers like "cache_key" into
+    # a SCREAMING_CASE credential-name match.
     check BLOCK private-repo-ops \
-      "(?i)\\b(?:${_ALT})\\b[^\\n]{0,140}?\\b${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?:${_ALT})\\b" \
+      "\\b(?i:${_ALT})\\b[^\\n]{0,140}?\\b${OPS_DETAIL}|${OPS_DETAIL}[^\\n]{0,140}?\\b(?i:${_ALT})\\b" \
       'A private WAVE repo named alongside internal operational detail (credential name, secret binding, or secret count) — the wiring topology is not public'
   fi
 fi

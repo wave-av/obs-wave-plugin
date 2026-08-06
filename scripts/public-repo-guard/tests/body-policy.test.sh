@@ -59,6 +59,10 @@ expect 1 'AWS access key id' \
   "The failing job had ${AKID_FIXTURE} configured."
 expect 1 'internal tailscale IP' \
   'It resolves to 100.71.4.19 from inside the fleet.'
+# The about-the-control allowlist must never rescue a credential FORMAT: a real
+# key on a line that mentions the gate or SECURITY.md is still a leak.
+expect 1 'credential format on a line mentioning the control' \
+  "See SECURITY.md — the key ${AKID_FIXTURE} was rotated after the incident."
 
 # --- must PASS (precision — these keep the gate deployable) -------------------
 expect 0 'bare private-repo cross-reference' \
@@ -67,6 +71,10 @@ expect 0 'two private repos, no operational detail' \
   'Both wave-gateway and wave-transports will need a follow-up for this.'
 expect 0 'credential NAME with no private repo nearby' \
   'The handler now reads SOME_API_TOKEN from the environment instead of a literal.'
+# Regression: (?i) was once applied to the whole private-repo-ops pattern, so a
+# lowercase everyday identifier near a repo name matched the SCREAMING_CASE rule.
+expect 0 'lowercase identifier near a private repo is not a credential name' \
+  'wave-gateway now derives the cache_key from the room id.'
 expect 0 'public runner path is not an operator path' \
   'CI checks out to /home/runner/work/repo/repo before the scan runs.'  # enforce-ignore (fixture)
 expect 0 'talking about the control' \
