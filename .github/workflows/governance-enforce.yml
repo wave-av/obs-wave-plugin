@@ -77,14 +77,17 @@ jobs:
           # pointing at a commit this checkout no longer contains.
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
              || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            BASE="$(git rev-parse --verify --quiet 'HEAD~1' || true)"
+            BASE=""
           fi
           # FIX 5 — fail CLOSED. This previously fell back to `BASE=HEAD`, and `--changed HEAD`
-          # diffs HEAD against itself: an empty diff, zero files scanned, job green. With no
-          # resolvable base, diff against the EMPTY TREE so every tracked file reads as added and
-          # the whole repo is scanned. (`--all` also exists in 0.4.6 and would do most of this, but
-          # it is documented as NOT covering the diff-scoped over-grant detectors. Routing through
-          # the diff path with an empty base keeps every detector in play.)
+          # diffs HEAD against itself: an empty diff, zero files scanned, job green. Narrowing an
+          # unresolved base to `HEAD~1` is the same failure in miniature: a force-push or
+          # branch-creation push can carry many commits, and diffing only the final one silently
+          # skips the rest. With no resolvable base, diff against the EMPTY TREE so every tracked
+          # file reads as added and the whole repo is scanned. (`--all` also exists in 0.4.6 and
+          # would do most of this, but it is documented as NOT covering the diff-scoped over-grant
+          # detectors. Routing through the diff path with an empty base keeps every detector in
+          # play.)
           if [ -z "$BASE" ]; then
             BASE="$(git hash-object -t tree /dev/null)"
             echo "::notice::no diff base resolved (root commit or unreachable before-sha) — scanning the whole tree against the empty tree"
