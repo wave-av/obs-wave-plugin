@@ -46,3 +46,18 @@ are resolved at build time:
 If you accidentally `git add` any of these, the foundation gate's
 vendor-binary deny-list (`libobs*`, `libsrt*`, NDI binaries) will refuse to
 merge. See `CONTRIBUTING.md` § "License boundary" and `.gitignore`.
+
+
+## Machine surface
+
+```yaml secrets-contract
+version: "0.1"
+secrets:
+  - name: SENTRY_AUTH_TOKEN
+    vault: "env:unattributed"
+deny_paths:
+  - ".dev.vars"
+  - ".dev.vars.*"
+  - ".env"
+  - ".env.*"
+```
