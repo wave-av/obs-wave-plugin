@@ -54,7 +54,7 @@ merge. See `CONTRIBUTING.md` § "License boundary" and `.gitignore`.
 version: "0.1"
 secrets:
   - name: SENTRY_AUTH_TOKEN
-    vault: "env:unattributed"
+    vault: "gh:wave-av/obs-wave-plugin"
 deny_paths:
   - ".dev.vars"
   - ".dev.vars.*"
