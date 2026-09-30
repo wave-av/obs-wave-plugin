@@ -1,0 +1,33 @@
+src/plugin-main.c
+  s_13d8878b20d2e4::t_36a2d6c44fa0c1 4
+src/wave-properties.c
+  s_13d8878b20d2e4::t_ea0ff8eece086f 9
+src/wave-srt.h
+  s_13d8878b20d2e4::t_a9dc26f9d1ce41 20
+src/wave-output.h
+  s_13d8878b20d2e4::t_11ac1227eb062c 4
+buildspec.json
+  s_13d8878b20d2e4::t_f32bb5785a1507 5
+src/wave-output.c
+  s_13d8878b20d2e4::t_fd7bc44639b09e 19
+src/wave-srt-parse.c
+  s_13d8878b20d2e4::t_d2273feb86884b 8
+src/wave-srt.c
+  s_13d8878b20d2e4::t_d3c352da907ca6 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "61cd8afcd3fb192c19e3e96b1cc6191beec8cedd",
+  "prompts": {},
+  "sessions": {
+    "s_13d8878b20d2e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae747f7877f0b6d6f",
+        "model": "unknown"
+      },
+      "human_author": "Jake Fineman <jakefineman@gmail.com>"
+    }
+  }
+}
