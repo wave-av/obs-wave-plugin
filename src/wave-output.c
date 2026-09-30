@@ -16,7 +16,7 @@
  * Threading: OBS calls encoded_packet on its encoder thread; wave_srt
  * uses non-blocking sends so we never stall that thread.
  *
- * Copyright (C) 2026  WAVE Online LLC
+ * Copyright (C) 2026  WAVE Online, LLC
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 

@@ -10,7 +10,7 @@
  * libsrt linkage: we use the C API only (srt.h) — no SRT::SocketGroup,
  * no live-bonding. Those are post-MVP and pull in libsrt's C++ surface.
  *
- * Copyright (C) 2026  WAVE Online LLC
+ * Copyright (C) 2026  WAVE Online, LLC
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 

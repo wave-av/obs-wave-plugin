@@ -2,7 +2,7 @@
   "$schema": "https://obsproject.github.io/obs-plugintemplate/buildspec.schema.json",
   "name": "wave-output",
   "version": "0.1.0",
-  "author": "WAVE Online LLC",
+  "author": "WAVE Online, LLC",
   "website": "https://github.com/wave-av/obs-wave-plugin",
   "email": "support@wave.online",
   "displayName": "WAVE Streaming Service",

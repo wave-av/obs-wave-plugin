@@ -17,7 +17,7 @@
  * If the buffer fills, push returns WAVE_SRT_E_WOULDBLOCK and the caller
  * should drop the frame rather than block the encoder thread.
  *
- * Copyright (C) 2026  WAVE Online LLC
+ * Copyright (C) 2026  WAVE Online, LLC
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
