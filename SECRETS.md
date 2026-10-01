@@ -23,7 +23,6 @@ and bearer tokens in every `blog()` log line.
 
 | Secret | Where | Purpose |
 |---|---|---|
-| `SENTRY_AUTH_TOKEN` | GitHub Actions repo secret | Symbol upload (Wave 2) |
 | `APPLE_SIGNING_IDENTITY` / `APPLE_NOTARIZATION_*` | GitHub Actions org secret | macOS dylib signing (Wave 2) |
 | `WINDOWS_SIGNING_CERT` / `WINDOWS_SIGNING_PASSWORD` | GitHub Actions org secret | Windows DLL signing (Wave 2) |
 
@@ -33,7 +32,6 @@ and bearer tokens in every `blog()` log line.
 |---|---|
 | OAuth client ID | Public by OAuth design (must be embedded in the client) |
 | Gateway base URL | Production endpoint is `https://api.wave.online` |
-| Sentry DSN (Wave 2) | DSNs are designed to be public; abuse is rate-limited by Sentry |
 
 ## Licensed binaries (NEVER vendored)
 
@@ -52,9 +50,7 @@ merge. See `CONTRIBUTING.md` § "License boundary" and `.gitignore`.
 
 ```yaml secrets-contract
 version: "0.1"
-secrets:
-  - name: SENTRY_AUTH_TOKEN
-    vault: "gh:wave-av/obs-wave-plugin"
+secrets: []
 deny_paths:
   - ".dev.vars"
   - ".dev.vars.*"

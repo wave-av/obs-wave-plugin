@@ -19,10 +19,5 @@
     ],
     "foundationFrameworks": ["frameworks/protocol-plane", "frameworks/platform-registry"]
   },
-  "events": {
-    "publishes": [
-      { "topic": "obs-plugin.push.failed", "transport": "sentry" }
-    ]
-  },
   "tags": ["operator", "public", "obs", "srt", "gpl-2", "on-prem", "build-on-wave"]
 }
