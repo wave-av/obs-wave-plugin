@@ -5,7 +5,7 @@
  * unit-testable without libsrt or libobs. The libsrt-dependent open /
  * push / close lives in wave-srt.c.
  *
- * Copyright (C) 2026  WAVE Online LLC
+ * Copyright (C) 2026  WAVE Online, LLC
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 

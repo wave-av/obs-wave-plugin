@@ -1,7 +1,7 @@
 /*
  * obs-wave-plugin — module entry points.
  *
- * Copyright (C) 2026  WAVE Online LLC
+ * Copyright (C) 2026  WAVE Online, LLC
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

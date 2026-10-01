@@ -6,7 +6,7 @@
  *   · stream key   (per-event, from wave.online/console; password-masked)
  *   · codec        (H.264 / HEVC / AV1; AV2 reserved for Wave 2)
  *
- * Copyright (C) 2026  WAVE Online LLC
+ * Copyright (C) 2026  WAVE Online, LLC
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
